@@ -5,65 +5,69 @@
  * @package forms
  * @subpackage fields-formattedinput
  */
-class AjaxUniqueTextField extends TextField {
-	
-	protected $restrictedField;
-	protected $restrictedTable;
-	// protected $restrictedMessage;
-	protected $validateURL;
-	
-	protected $restrictedRegex;
-	
-	public function __construct($name, $title, $restrictedField, $restrictedTable, $value = "", $maxLength = null,
-			$validationURL = null, $restrictedRegex = null ){
+class AjaxUniqueTextField extends TextField
+{
+    
+    protected $restrictedField;
+    protected $restrictedTable;
+    // protected $restrictedMessage;
+    protected $validateURL;
+    
+    protected $restrictedRegex;
+    
+    public function __construct($name, $title, $restrictedField, $restrictedTable, $value = "", $maxLength = null,
+            $validationURL = null, $restrictedRegex = null)
+    {
+        $this->maxLength = $maxLength;
+        
+        $this->restrictedField = $restrictedField;
+        
+        $this->restrictedTable = $restrictedTable;
+        
+        $this->validateURL = $validationURL;
+        
+        $this->restrictedRegex = $restrictedRegex;
+        
+        parent::__construct($name, $title, $value);
+    }
+    
+    public function Field($properties = array())
+    {
+        $url = Convert::raw2att($this->validateURL);
+        
+        if ($this->restrictedRegex) {
+            $restrict = "<input type=\"hidden\" class=\"hidden\" name=\"{$this->name}Restricted\" id=\"" . $this->id()
+                . "RestrictedRegex\" value=\"{$this->restrictedRegex}\" />";
+        }
+        
+        $attributes = array(
+            'type' => 'text',
+            'class' => 'text' . ($this->extraClass() ? $this->extraClass() : ''),
+            'id' => $this->id(),
+            'name' => $this->getName(),
+            'value' => $this->Value(),
+            'tabindex' => $this->getAttribute('tabindex'),
+            'maxlength' => ($this->maxLength) ? $this->maxLength : null
+        );
+        
+        return FormField::create_tag('input', $attributes);
+    }
 
-		$this->maxLength = $maxLength;
-		
-		$this->restrictedField = $restrictedField;
-		
-		$this->restrictedTable = $restrictedTable;
-		
-		$this->validateURL = $validationURL;
-		
-		$this->restrictedRegex = $restrictedRegex;
-		
-		parent::__construct($name, $title, $value);	
-	}
-	
-	public function Field($properties = array()) {
-		$url = Convert::raw2att( $this->validateURL );
-		
-		if($this->restrictedRegex)
-			$restrict = "<input type=\"hidden\" class=\"hidden\" name=\"{$this->name}Restricted\" id=\"" . $this->id()
-				. "RestrictedRegex\" value=\"{$this->restrictedRegex}\" />";
-		
-		$attributes = array(
-			'type' => 'text',
-			'class' => 'text' . ($this->extraClass() ? $this->extraClass() : ''),
-			'id' => $this->id(),
-			'name' => $this->getName(),
-			'value' => $this->Value(),
-			'tabindex' => $this->getAttribute('tabindex'),
-			'maxlength' => ($this->maxLength) ? $this->maxLength : null
-		);
-		
-		return FormField::create_tag('input', $attributes);
-	}
+    public function validate($validator)
+    {
+        $result = DB::query(sprintf(
+            "SELECT COUNT(*) FROM \"%s\" WHERE \"%s\" = '%s'",
+            $this->restrictedTable,
+            $this->restrictedField,
+            Convert::raw2sql($this->value)
+        ))->value();
 
-	public function validate( $validator ) {
-		$result = DB::query(sprintf(
-			"SELECT COUNT(*) FROM \"%s\" WHERE \"%s\" = '%s'",
-			$this->restrictedTable,
-			$this->restrictedField,
-			Convert::raw2sql($this->value)
-		))->value();
+        if ($result && ($result > 0)) {
+            $validator->validationError($this->name,
+                _t('Form.VALIDATIONNOTUNIQUE', "The value entered is not unique"));
+            return false;
+        }
 
-		if( $result && ( $result > 0 ) ) {
-			$validator->validationError($this->name,
-				_t('Form.VALIDATIONNOTUNIQUE', "The value entered is not unique"));
-			return false;
-		}
-
-		return true; 
-	}
+        return true;
+    }
 }
